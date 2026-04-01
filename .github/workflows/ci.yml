@@ -8,7 +8,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # Correction : l'owner doit être en minuscules pour Docker (agbadogbe)
   IMAGE_BACKEND: ghcr.io/agbadogbe/vitalsync-backend
   IMAGE_FRONTEND: ghcr.io/agbadogbe/vitalsync-frontend
 
@@ -25,7 +24,6 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          # On ne spécifie pas le path du lockfile s'il n'existe pas encore
           
       - name: Installation des dépendances
         working-directory: backend
@@ -33,7 +31,6 @@ jobs:
 
       - name: Exécution des tests
         working-directory: backend
-        # Ajout de --passWithNoTests pour garantir que la pipeline avance
         run: npm test -- --passWithNoTests
 
   build-docker:
@@ -42,7 +39,7 @@ jobs:
     needs: lint-and-test
     permissions:
       contents: read
-      packages: write # Nécessaire pour pousser sur GHCR
+      packages: write
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
