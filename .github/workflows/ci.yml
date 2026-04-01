@@ -1,0 +1,84 @@
+name: CI/CD VitalSync
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BACKEND: ghcr.io/agbadogbe/vitalsync-backend
+  IMAGE_FRONTEND: ghcr.io/agbadogbe/vitalsync-frontend
+
+jobs:
+  lint-and-test:
+    name: 🧪 Lint & Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Configuration de Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          
+      - name: Installation des dépendances
+        working-directory: backend
+        run: npm install
+
+      - name: Exécution des tests
+        working-directory: backend
+        run: npm test -- --passWithNoTests
+
+  build-docker:
+    name: 🐳 Build Docker Images
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Connexion à GitHub Container Registry (GHCR)
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ env.IMAGE_BACKEND }}:${{ github.sha }}
+            ${{ env.IMAGE_BACKEND }}:latest
+
+      - name: Build & Push Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.IMAGE_FRONTEND }}:${{ github.sha }}
+            ${{ env.IMAGE_FRONTEND }}:latest
+
+  deploy-staging:
+    name: 🚀 Deploy Staging (Simulation)
+    runs-on: ubuntu-latest
+    needs: build-docker
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Simulation du déploiement
+        run: |
+          echo "Déploiement de la version ${{ github.sha }} sur l'environnement de staging..."
+          echo "Vérification de la connectivité avec la base de données PostgreSQL..."
+          echo "Application des manifests Kubernetes ou Docker Compose..."

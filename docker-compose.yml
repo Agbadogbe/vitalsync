@@ -1,0 +1,57 @@
+version: "3.9"
+
+networks:
+  vitalsync-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+
+services:
+  backend:
+    build: ./backend
+    container_name: vitalsync-backend
+    restart: unless-stopped
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=${POSTGRES_DB}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+    networks:
+      - vitalsync-net
+    expose:
+      - "3000"
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    container_name: vitalsync-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - vitalsync-net
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: vitalsync-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - vitalsync-net
+    expose:
+      - "5432"
